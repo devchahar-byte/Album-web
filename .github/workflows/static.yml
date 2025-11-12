@@ -1,43 +1,182 @@
-# Simple workflow for deploying static content to GitHub Pages
-name: Deploy static content to Pages
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Photo Gallery</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Use Inter font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Style for the modal navigation buttons */
+        .modal-btn {
+            @apply absolute top-1/2 -translate-y-1/2 bg-white/30 text-white rounded-full p-2 hover:bg-white/50 transition-all;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-900 antialiased">
 
-on:
-  # Runs on pushes targeting the default branch
-  push:
-    branches: ["main"]
+    <!-- Header -->
+    <header class="bg-white shadow-md sticky top-0 z-10">
+        <div class="container mx-auto max-w-6xl px-6 py-5">
+            <h1 class="text-3xl font-bold text-gray-900">My Photo Gallery</h1>
+            <p class="mt-1 text-lg text-gray-600">A modern, interactive photo collection.</p>
+        </div>
+    </header>
 
-  # Allows you to run this workflow manually from the Actions tab
-  workflow_dispatch:
+    <!-- Main Content - Photo Grid -->
+    <main class="container mx-auto max-w-6xl px-6 py-10">
+        <div id="gallery" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-6">
+            
+            <!-- Gallery items will be added here by JavaScript -->
+            <!-- Example item structure:
+            <div class="gallery-item group cursor-pointer" data-src="https://placehold.co/1200x800" data-caption="A beautiful landscape">
+                <img src="https://placehold.co/400x400" alt="Thumbnail" class="w-full h-auto aspect-square object-cover rounded-lg shadow-md group-hover:shadow-xl transition-all duration-300 group-hover:scale-105">
+            </div>
+            -->
+            
+        </div>
+    </main>
 
-# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
-permissions:
-  contents: read
-  pages: write
-  id-token: write
+    <!-- Footer -->
+    <footer class="text-center py-6 mt-8">
+        <p class="text-gray-500">A fully functional single-page gallery.</p>
+    </footer>
 
-# Allow only one concurrent deployment, skipping runs queued between the run in-progress and latest queued.
-# However, do NOT cancel in-progress runs as we want to allow these production deployments to complete.
-concurrency:
-  group: "pages"
-  cancel-in-progress: false
+    <!-- Modal Lightbox -->
+    <div id="modal" class="fixed inset-0 bg-black/90 flex items-center justify-center p-4 z-50 hidden transition-opacity duration-300">
+        <!-- Close Button -->
+        <button id="closeModalBtn" class="absolute top-4 right-4 text-white text-3xl opacity-70 hover:opacity-100">&times;</button>
 
-jobs:
-  # Single deploy job since we're just deploying
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Setup Pages
-        uses: actions/configure-pages@v5
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          # Upload entire repository
-          path: '.'
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+        <!-- Previous Button -->
+        <button id="prevBtn" class="modal-btn left-4 text-2xl">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+        </button>
+
+        <!-- Modal Content -->
+        <div class="relative max-w-full max-h-full flex flex-col items-center">
+            <img id="modalImage" src="" alt="Full-size photo" class="max-w-[85vw] max-h-[85vh] object-contain rounded-lg shadow-2xl">
+            <p id="modalCaption" class="text-white text-lg mt-4"></p>
+        </div>
+
+        <!-- Next Button -->
+        <button id="nextBtn" class="modal-btn right-4 text-2xl">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+        </button>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            
+            // --- 1. DEFINE IMAGE DATA ---
+            // In a real app, this would come from an API. Here, we use placeholder images.
+            const galleryData = [
+                { id: 1, thumb: 'https://placehold.co/400x400/F9A8D4/4A232E?text=Photo+1', full: 'https://placehold.co/1200x800/F9A8D4/4A232E?text=Photo+1', caption: 'Pink Blossom' },
+                { id: 2, thumb: 'https://placehold.co/400x400/A7F3D0/20573A?text=Photo+2', full: 'https://placehold.co/1200x800/A7F3D0/20573A?text=Photo+2', caption: 'Mint Green' },
+                { id: 3, thumb: 'https://placehold.co/400x400/BFDBFE/1E3A8A?text=Photo+3', full: 'https://placehold.co/1200x800/BFDBFE/1E3A8A?text=Photo+3', caption: 'Sky Blue' },
+                { id: 4, thumb: 'https://placehold.co/400x400/FDE68A/7C2D12?text=Photo+4', full: 'https://placehold.co/1200x800/FDE68A/7C2D12?text=Photo+4', caption: 'Warm Yellow' },
+                { id: 5, thumb: 'https://placehold.co/400x400/D1D5DB/1F2937?text=Photo+5', full: 'https://placehold.co/1200x800/D1D5DB/1F2937?text=Photo+5', caption: 'Modern Gray' },
+                { id: 6, thumb: 'https://placehold.co/400x400/FECACA/7F1D1D?text=Photo+6', full: 'https://placehold.co/1200x800/FECACA/7F1D1D?text=Photo+6', caption: 'Soft Red' },
+                { id: 7, thumb: 'https://placehold.co/400x400/E9D5FF/3B0764?text=Photo+7', full: 'https://placehold.co/1200x800/E9D5FF/3B0764?text=Photo+7', caption: 'Lavender Field' },
+                { id: 8, thumb: 'https://placehold.co/400x400/FDBA74/7C2D12?text=Photo+8', full: 'https://placehold.co/1200x800/FDBA74/7C2D12?text=Photo+8', caption: 'Autumn Orange' },
+                { id: 9, thumb: 'https://placehold.co/400x400/86EFAC/14532D?text=Photo+9', full: 'https://placehold.co/1200x800/86EFAC/14532D?text=Photo+9', caption: 'Bright Lime' },
+                { id: 10, thumb: 'https://placehold.co/400x400/A5B4FC/1E1B4B?text=Photo+10', full: 'https://placehold.co/1200x800/A5B4FC/1E1B4B?text=Photo+10', caption: 'Deep Indigo' },
+                { id: 11, thumb: 'https://placehold.co/400x400/FBCFE8/831843?text=Photo+11', full: 'https://placehold.co/1200x800/FBCFE8/831843?text=Photo+11', caption: 'Rose Pink' },
+                { id: 12, thumb: 'https://placehold.co/400x400/BAE6FD/0C4A6E?text=Photo+12', full: 'https://placehold.co/1200x800/BAE6FD/0C4A6E?text=Photo+12', caption: 'Ocean Blue' },
+                { id: 13, thumb: 'https://placehold.co/400x400/FDE047/78350F?text=Photo+13', full: 'https://placehold.co/1200x800/FDE047/78350F?text=Photo+13', caption: 'Sunflower' },
+                { id: 14, thumb: 'https://placehold.co/400x400/DDD6FE/3730A3?text=Photo+14', full: 'https://placehold.co/1200x800/DDD6FE/3730A3?text=Photo+14', caption: 'Violet Hue' },
+                { id: 15, thumb: 'https://placehold.co/400x400/B4E4D3/134E4A?text=Photo+15', full: 'https://placehold.co/1200x800/B4E4D3/134E4A?text=Photo+15', caption: 'Teal Dream' },
+            ];
+
+            // --- 2. GET DOM ELEMENTS ---
+            const gallery = document.getElementById('gallery');
+            const modal = document.getElementById('modal');
+            const modalImage = document.getElementById('modalImage');
+            const modalCaption = document.getElementById('modalCaption');
+            const closeModalBtn = document.getElementById('closeModalBtn');
+            const prevBtn = document.getElementById('prevBtn');
+            const nextBtn = document.getElementById('nextBtn');
+
+            let currentImageIndex = 0;
+
+            // --- 3. POPULATE GALLERY ---
+            galleryData.forEach((item, index) => {
+                const galleryItem = document.createElement('div');
+                galleryItem.className = 'gallery-item group cursor-pointer';
+                galleryItem.innerHTML = `
+                    <img src="${item.thumb}" alt="${item.caption}" class="w-full h-auto aspect-square object-cover rounded-lg shadow-md group-hover:shadow-xl transition-all duration-300 group-hover:scale-105">
+                `;
+                
+                // Add click listener to open modal
+                galleryItem.addEventListener('click', () => {
+                    openModal(index);
+                });
+                
+                gallery.appendChild(galleryItem);
+            });
+
+            // --- 4. MODAL FUNCTIONS ---
+            function openModal(index) {
+                currentImageIndex = index;
+                updateModalContent();
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+            }
+
+            function closeModal() {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+                modalImage.src = ''; // Clear src to stop loading
+            }
+
+            function updateModalContent() {
+                const item = galleryData[currentImageIndex];
+                modalImage.src = item.full;
+                modalImage.alt = item.caption;
+                modalCaption.textContent = item.caption;
+            }
+
+            function showNextImage() {
+                currentImageIndex = (currentImageIndex + 1) % galleryData.length;
+                updateModalContent();
+            }
+
+            function showPrevImage() {
+                currentImageIndex = (currentImageIndex - 1 + galleryData.length) % galleryData.length;
+                updateModalContent();
+            }
+
+            // --- 5. EVENT LISTENERS ---
+            closeModalBtn.addEventListener('click', closeModal);
+            nextBtn.addEventListener('click', showNextImage);
+            prevBtn.addEventListener('click', showPrevImage);
+
+            // Close modal on background click
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    closeModal();
+                }
+            });
+
+            // Keyboard navigation
+            document.addEventListener('keydown', (e) => {
+                if (!modal.classList.contains('hidden')) {
+                    if (e.key === 'ArrowRight') {
+                        showNextImage();
+                    } else if (e.key === 'ArrowLeft') {
+                        showPrevImage();
+                    } else if (e.key === 'Escape') {
+                        closeModal();
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+</html>
